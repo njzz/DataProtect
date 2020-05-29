@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">DataProtect</string>
+    <string name="create_err">不能创建目录</string>
+    <string name="hint_create_tips">创建验证密码</string>
+    <string name="hint_auth_tips">输入验证密码</string>
+
+    <string name="btn_auth">验证</string>
+    <string name="btn_create">创建</string>
+    <string name="btn_save">保存</string>
+    <string name="btn_load">导入</string>
+    <string name="btn_saveas">导出</string>
+
+    <string name="hint_save_info">输入内容</string>
+
+
+</resources>

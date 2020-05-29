@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>     
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"     
+    android:orientation="horizontal"  
+    android:layout_width="fill_parent"   
+    android:layout_height="fill_parent">
+    <Button
+        android:visibility="invisible"
+        android:id="@+id/btnLoad"
+        android:layout_width="55dp"
+        android:layout_height="40dp"
+        android:text="@string/btn_load"
+        android:layout_centerInParent="true"
+        android:layout_alignParentStart="true"
+        android:onClick="onLoad"
+        />
+    <Button
+        android:visibility="invisible"
+        android:id="@+id/btnSaveAs"
+        android:layout_width="55dp"
+        android:layout_height="40dp"
+        android:text="@string/btn_saveas"
+        android:layout_centerInParent="true"
+        android:layout_toEndOf="@id/btnLoad"
+        android:onClick="onSaveAs"
+        />
+    <TextView 
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="@string/app_name" />
+ 
+    <Button
+        android:visibility="invisible"
+        android:id="@+id/btnSave"
+        android:layout_width="60dp"
+        android:layout_height="50dp"
+        android:text="@string/btn_save"
+        android:layout_centerInParent="true"
+        android:layout_alignParentEnd="true"
+        android:onClick="onSave"
+        />
+          
+</RelativeLayout>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/app/src/main/cpp/DataChange.cpp" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/cpp/DataChange.h" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/cpp/FileProcess.cpp" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/cpp/FileProcess.h" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/cpp/MD5.cpp" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/cpp/MD5.h" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/cpp/helpers.cpp" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/cpp/helpers.h" charset="GBK" />
+  </component>
+</project>
