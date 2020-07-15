@@ -3,10 +3,10 @@ apply plugin: 'com.android.application'
 android {
     signingConfigs {
         release {
-            storeFile file('E:\\work\\other\\account\\njz.jks')
-            storePassword 'njz12qaz'
-            keyAlias = 'key0'
-            keyPassword 'njz12qaz'
+            storeFile file('E:\\persional\\docs\\java-android\\accounts\\njz.jks')
+            storePassword 'ad123456'
+            keyAlias = 'jsyf'
+            keyPassword 'ad123456'
         }
     }
     compileSdkVersion 29
