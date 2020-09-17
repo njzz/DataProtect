@@ -18,10 +18,10 @@ add_library( # Sets the name of the library.
 
              # Provides a relative path to your source file(s).
              native-lib.cpp
-             MD5.cpp
+             DHP.cpp
              helpers.cpp
              FileOpt.cpp
-             FileProcess.cpp
+             SHA256.cpp
              DataChange.cpp
         )
 

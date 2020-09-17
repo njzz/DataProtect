@@ -24,6 +24,11 @@ bool FileOpt::Open( LPCTSTR lpFile,bool isRead )
 	return m_file.is_open();
 }
 
+bool FileOpt::IsOpend() const
+{
+	return m_file.is_open();
+}
+
 bool FileOpt::Write(const void *data,UINT len ,bool bFlush)
 {
 	bool br=false;
@@ -39,10 +44,7 @@ bool FileOpt::Write(const void *data,UINT len ,bool bFlush)
 
 bool FileOpt::IsEof() const
 {
-	if (m_file.is_open()) {
-		return m_file.eof();
-	}
-	return true;
+	return !m_file.is_open() || m_file.eof();
 }
 
 void FileOpt::Close()

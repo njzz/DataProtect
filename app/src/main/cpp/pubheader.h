@@ -3,10 +3,12 @@ typedef unsigned char BYTE;
 typedef unsigned  int UINT;
 typedef UINT DWORD;
 typedef UINT ULONG;
-typedef const char * LPCTSTR;
 typedef BYTE UCHAR;
 typedef char TCHAR;
-#define _T
+typedef const char * LPCTSTR;
+
+#else
+#include <Windows.h>
 #endif
 
 #include <string>

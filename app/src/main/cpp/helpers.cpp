@@ -1,7 +1,10 @@
 
+#include "pubheader.h"
 #include "helpers.h"
 #include <time.h>
-#include "MD5.h"
+#include "SHA256.h"
+#include <assert.h>
+#include <random>
 
 namespace Helpers
 {
@@ -10,6 +13,8 @@ void CreateRandomData(char *pData,size_t nlen)
 {
 	size_t i=0;
 	int nThisRand;
+	while (i++ < (unsigned char)pData[0]) rand();//空转0~255次
+	i = 0;
 	while(i<nlen)
 	{
 		nThisRand=rand();
@@ -18,7 +23,7 @@ void CreateRandomData(char *pData,size_t nlen)
 	}
 }
 
-static bool CreateRandomString(size_t len,	std::string* str)
+static bool CreateRandomString(size_t len,std::string* str,int rd)
 {
 		str->clear();
 
@@ -27,15 +32,25 @@ static bool CreateRandomString(size_t len,	std::string* str)
 		if(bytes)
 		{
 			static int keyself=0;
-			++keyself;
-			srand((unsigned int)time(NULL));//time is first
+			keyself+=23;
+			auto timeNow = (unsigned int)time(NULL);
+			srand(timeNow);//时间
 			CreateRandomData(bytes,len);//未初始化版
 
-			//根据堆栈变量内存地址乘积
-			srand((DWORD)(long long)(&len)*(DWORD)(long long)(bytes));
+			if (rd == 0) rd = (int)(size_t)(char*)str + keyself++ + bytes[0];//如果为 0
+			srand(rd+991);//自己提供的种子
+			CreateRandomData(bytes, len);//
+
+			//堆栈变量内存地址乘积
+			srand((DWORD)(long long)(&len)*(DWORD)(long long)(bytes)*bytes[len-1]);
+			CreateRandomData(bytes, len);
+
+			//c++ 标准种子(可能根据硬件产生种子)
+			std::random_device rd;
+			srand(rd());
 			CreateRandomData(bytes, len);
 #ifdef _WIN32
-			srand(GetTickCount()+keyself);//tickcout
+			srand(GetTickCount() + keyself++ );//tickcout
 			CreateRandomData(bytes,len);
 
 			//根据磁盘剩余空间数产生种子
@@ -49,10 +64,8 @@ static bool CreateRandomString(size_t len,	std::string* str)
 			}
 				
 #else
-			if ( len > 16) {//
-				srand(bytes[3] * bytes[13]);//
-				CreateRandomData(bytes, len);
-				srand(bytes[5] * bytes[15]);//
+			if ( len > 6) {//
+				srand(bytes[3] * bytes[6]);//
 				CreateRandomData(bytes, len);
 			}
 #endif
@@ -69,16 +82,16 @@ std::string GetEQBreakAway(const std::string &str) {
 	std::string strOut;
 	auto lensrc = str.length();
 	if (lensrc > 0) {
-		constexpr int aligned_set = 16;//选择md5，所以16字节
+		constexpr int aligned_set = 32;//选择sha256，所以32字节
 		auto newLen = ((lensrc + aligned_set - 1) / aligned_set) * aligned_set;
 		strOut.reserve(newLen);
 
 		size_t index = 0;
-		std::string strMD5;
+		std::string strDigest;
 		while (index < lensrc) {//补齐
 			//等效生成，n 字节生成 n字节摘要
-			strMD5 = CMD5Checksum::GetMD5((BYTE*)(str.c_str() + index), (index + aligned_set <= lensrc ? aligned_set : lensrc - index), false);
-			strOut.append(strMD5.c_str(), aligned_set);
+			strDigest = StrSHA256(str.c_str() + index, (index + aligned_set <= lensrc ? aligned_set : lensrc - index));
+			strOut.append(strDigest.c_str(), aligned_set);
 			index += aligned_set;
 		}
 		
@@ -90,12 +103,16 @@ std::string GetEQBreakAway(const std::string &str) {
 std::string & GetBreakAway(std::string & strInfo, int len)
 {
 	if (strInfo.length() > 0) {
-		while (strInfo.size() < len) {//如果小于一个最小值，扩充到最小值
-			strInfo.append(1, char(strInfo.c_str()[len % strInfo.size()] + strInfo.size() * 3) );
+		if (strInfo.size() < len) {
+			strInfo.reserve(len);
+			strInfo.append(1, (char)0);//以不可输入的0隔断，否则可能产生短的和长的补全后相同的情况
+			while (strInfo.size() < len) {//如果小于一个最小值，扩充到最小值
+				strInfo.append(1, char(strInfo.c_str()[len % strInfo.size()] + strInfo.size() * 3));
+			}
 		}
 
 		//先来一次全面的，直接等效扩展，如果密码长度大于16，会造成前面一样，而要得是就算改变一个，也大不一样
-		auto mTotal = CMD5Checksum::GetMD5((BYTE*)strInfo.c_str(), strInfo.length(), false);
+		auto mTotal = StrSHA256(strInfo.c_str(), strInfo.length());
 
 		//叠加扩展
 		size_t index = 0;
@@ -112,10 +129,10 @@ std::string & GetBreakAway(std::string & strInfo, int len)
 	return strInfo;
 }
 
-std::string CreateRandomString( size_t length )
+std::string CreateRandomString( size_t length ,int rd )
 {
 	std::string str;
-	CreateRandomString(length,&str);
+	CreateRandomString(length,&str,rd);
 
 	return str;
 }

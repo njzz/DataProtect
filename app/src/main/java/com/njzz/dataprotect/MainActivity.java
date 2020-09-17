@@ -1,10 +1,9 @@
 package com.njzz.dataprotect;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.FileProvider;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentUris;
 import android.content.Context;
@@ -22,18 +21,14 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.InputStream;
+
 
 public class MainActivity extends Activity {
 
@@ -56,8 +51,8 @@ public class MainActivity extends Activity {
         ActivityCompat.requestPermissions(this, permission, 1);
 
         File f= this.getFilesDir();
-        final String keyFile = f.getPath()+"\\pass.key";
-        strData_Path = f.getPath()+"private.file";
+        final String keyFile = f.getPath()+"/pass.key";
+        strData_Path = f.getPath()+"/private.file";
         if(!f.exists() && !f.mkdir()){
             new AlertDialog.Builder(this)
                     .setTitle("提示")
@@ -137,13 +132,14 @@ public class MainActivity extends Activity {
         //加载现有内容
         String info=DecodeFile2Str(strData_Path);
         edInfo.setText(info);
+
     }
 
     public void onLoad(View v) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*");//设置类型，我这里是任意类型，任意后缀的可以这样写。
+        intent.setType("*/*");//无类型限制
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(intent,1);
+        startActivityForResult( Intent.createChooser(intent, "选择文件导入"), 1);
     }
 
     public void onSaveAs(View v) {
@@ -171,6 +167,18 @@ public class MainActivity extends Activity {
         }
 
         return bytes;
+    }
+
+    public byte[] readUri(Uri uri){
+        byte[] buffer = null;
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(uri);
+            buffer = new byte[inputStream.available()];
+            inputStream.read(buffer);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return buffer;
     }
 
     public void save(byte [] data,String path){
@@ -202,42 +210,36 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        String path=null;
+        Uri uri=null;
         if (resultCode == RESULT_OK) {
-            Uri uri = data.getData();
-            if (uri != null) {
-                path = getPath(this, uri);
-                if (path != null) {
-                    File file = new File(path);
-                    if (file.exists()) {
-                        String upLoadFilePath = file.toString();
-                        String upLoadFileName = file.getName();
-                    }
-                }
-            }
+            uri = data.getData();
         }
 
-        if (requestCode == 1) {//load
-            byte [] datar = read(path);
-            save(datar,strData_Path);
+        if (requestCode == 1 && uri !=null) {//load
+            byte [] datar = readUri(uri);
+            if(datar.length>0) {
+                save(datar, strData_Path);
 
-            //加载现有内容
-            String info=DecodeFile2Str(strData_Path);
-            edInfo.setText(info);
+                //加载现有内容
+                String info = DecodeFile2Str(strData_Path);
+                edInfo.setText(info);
+            }
         }
     }
 
+    /**
+     * 专为Android4.4设计的从Uri获取文件绝对路径，以前的方法已不好使
+     */
+    @SuppressLint("NewApi")
     public String getPath(final Context context, final Uri uri) {
+
+        final boolean isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
+
         // DocumentProvider
-        if ( DocumentsContract.isDocumentUri(context, uri)) {
+        if (isKitKat && DocumentsContract.isDocumentUri(context, uri)) {
             // ExternalStorageProvider
             if (isExternalStorageDocument(uri)) {
                 final String docId = DocumentsContract.getDocumentId(uri);
-//                Log.i(TAG,"isExternalStorageDocument***"+uri.toString());
-//                Log.i(TAG,"docId***"+docId);
-//                以下是打印示例：
-//                isExternalStorageDocument***content://com.android.externalstorage.documents/document/primary%3ATset%2FROC2018421103253.wav
-//                docId***primary:Test/ROC2018421103253.wav
                 final String[] split = docId.split(":");
                 final String type = split[0];
 
@@ -247,7 +249,7 @@ public class MainActivity extends Activity {
             }
             // DownloadsProvider
             else if (isDownloadsDocument(uri)) {
-//                Log.i(TAG,"isDownloadsDocument***"+uri.toString());
+
                 final String id = DocumentsContract.getDocumentId(uri);
                 final Uri contentUri = ContentUris.withAppendedId(
                         Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
@@ -256,7 +258,6 @@ public class MainActivity extends Activity {
             }
             // MediaProvider
             else if (isMediaDocument(uri)) {
-//                Log.i(TAG,"isMediaDocument***"+uri.toString());
                 final String docId = DocumentsContract.getDocumentId(uri);
                 final String[] split = docId.split(":");
                 final String type = split[0];
@@ -278,12 +279,10 @@ public class MainActivity extends Activity {
         }
         // MediaStore (and general)
         else if ("content".equalsIgnoreCase(uri.getScheme())) {
-//            Log.i(TAG,"content***"+uri.toString());
             return getDataColumn(context, uri, null, null);
         }
         // File
         else if ("file".equalsIgnoreCase(uri.getScheme())) {
-//            Log.i(TAG,"file***"+uri.toString());
             return uri.getPath();
         }
         return null;
@@ -320,15 +319,26 @@ public class MainActivity extends Activity {
         return null;
     }
 
-
+    /**
+     * @param uri The Uri to check.
+     * @return Whether the Uri authority is ExternalStorageProvider.
+     */
     public boolean isExternalStorageDocument(Uri uri) {
         return "com.android.externalstorage.documents".equals(uri.getAuthority());
     }
 
+    /**
+     * @param uri The Uri to check.
+     * @return Whether the Uri authority is DownloadsProvider.
+     */
     public boolean isDownloadsDocument(Uri uri) {
         return "com.android.providers.downloads.documents".equals(uri.getAuthority());
     }
 
+    /**
+     * @param uri The Uri to check.
+     * @return Whether the Uri authority is MediaProvider.
+     */
     public boolean isMediaDocument(Uri uri) {
         return "com.android.providers.media.documents".equals(uri.getAuthority());
     }
