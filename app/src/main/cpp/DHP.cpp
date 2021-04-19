@@ -86,7 +86,7 @@ namespace DP {
 		return GetSaveKey(lpFileKey).size() == GetAuthKeySaveLen();
 	}
 
-	bool ProcessFile(LPCTSTR  lpFileIn, LPCTSTR  lpFileOut, const std::string &key, bool bEncode)
+	bool ProcessFile(LPCTSTR  lpFileIn, LPCTSTR  lpFileOut, const std::string &key, bool bEncrypt)
 	{
 		bool bSuccessed = false;
 		if (lpFileIn != lpFileOut && lpFileOut != nullptr)
@@ -101,7 +101,7 @@ namespace DP {
 					char bufIn[nReadCount];
 
 					DataChange dataChange;
-					if (bEncode) {
+					if (bEncrypt) {
 						auto head = dataChange.CreateHead(key);//set key
 						bSuccessed = fileOut.Write(head.c_str(), head.length());//写入头信息
 					}
@@ -115,10 +115,10 @@ namespace DP {
 						nRead = fileIn.Read(bufIn, nReadCount);
 						if (nRead > 0)
 						{
-							if (bEncode)
-								dataChange.Encode(bufIn, nRead);
+							if (bEncrypt)
+								dataChange.Encrypt(bufIn, nRead);
 							else
-								dataChange.Decode(bufIn, nRead);
+								dataChange.Decrypt(bufIn, nRead);
 							if (!fileOut.Write(bufIn, nRead)) {
 								bSuccessed = false;
 								break;
@@ -135,51 +135,43 @@ namespace DP {
 		return bSuccessed;
 	}
 
-	bool ProcessStr(const std::string & strIn, std::string & strOut, const std::string & key, bool bEncode)
+	bool ProcessStr(const std::string & strIn, std::string & strOut, const std::string & key, bool bEncrypt)
+	{
+		bool rt = false;
+		if (bEncrypt) {
+			rt = ProcessData(strIn, strOut, key, bEncrypt);
+			if(rt){
+				strOut = Helpers::BasicToHex(strOut.c_str(), strOut.size());//处理为hex
+			}
+		}
+		else {
+			rt = ProcessData(Helpers::HexToBasic(strIn.c_str(),strIn.size()), strOut, key, bEncrypt);//
+		}
+
+		return rt;
+	}
+	bool ProcessData(const std::string & dataIn, std::string & dataOut, const std::string & key, bool bEncrypt)
 	{
 		bool bSuccessed = false;
 		const auto lkeylen = GetLongKeyLen();
-		if (!strIn.empty() && key.size() == lkeylen)
+		if (!dataIn.empty() && key.size() == lkeylen)
 		{
-			std::string decode;
-			size_t dataSize = 0;
-			const char *pData=nullptr;
-
+			dataOut.clear();
 			DataChange dataChange;
-			if (bEncode) {//加密
-				auto head = dataChange.CreateHead(key);//set key
-				strOut.reserve((strIn.size() + lkeylen) * 2 + 1);//reserver
-				strOut = Helpers::BasicToHex(head.c_str(), head.length());//写入头信息
+			if (bEncrypt) {//加密
 				bSuccessed = true;
-
-				dataSize = strIn.size();
-				pData = strIn.c_str();
+				auto head = dataChange.CreateHead(key);//set key
+				dataOut.reserve(dataIn.size() + head.size() + 1);//预分配
+				dataOut.append(head);//写入头信息
+				dataOut.append(dataIn);//数据复制
+				dataChange.Encrypt(((char *)dataOut.c_str())+head.size(), (UINT)dataOut.size()-head.size());
 			}
-			else if (strIn.size() > lkeylen * 2) {//解密
-				decode = Helpers::HexToBasic(strIn.c_str(), strIn.length());//西安从hex转换回来
-				bSuccessed = (decode.size() > lkeylen) && dataChange.SetHead(key, decode.substr(0, lkeylen));
-
-				dataSize = decode.size() - lkeylen;
-				pData = decode.c_str() + lkeylen;
-			}
-
-			if (bSuccessed)
-			{
-				char *buf = new char[dataSize];
-				if (buf) {
-					memcpy(buf, pData, dataSize);
-
-					if (bEncode) {
-						dataChange.Encode(buf, dataSize);
-						strOut.append(Helpers::BasicToHex(buf, dataSize));
-					}
-					else {
-						dataChange.Decode(buf, dataSize);
-						strOut.assign(buf, dataSize);
-					}
+			else if (dataIn.size() > lkeylen) {//解密
+				bSuccessed = dataChange.SetHead(key, dataIn.substr(0, lkeylen));
+				if (bSuccessed) {
+					dataOut.assign(dataIn.c_str() + lkeylen, dataIn.size() - lkeylen);
+					dataChange.Decrypt((char *)dataOut.c_str(), (UINT)dataOut.size());
 				}
-
-				bSuccessed = buf != nullptr;
 			}
 		}
 
@@ -243,7 +235,7 @@ namespace DP {
 
 			memcpy(dataSet, data + wtd, curSize);//数据复制
 			wtd += curSize;
-			m_dataChange.Encode(dataSet, (UINT)curSize);//加密
+			m_dataChange.Encrypt(dataSet, (UINT)curSize);//加密
 			if (!m_fileOut.Write(dataSet, curSize))//写入
 				return false;
 		}
@@ -273,13 +265,17 @@ namespace DP {
 		return bSuccessed;
 	}
 
+	bool DataLoad::IsEof() const{
+		return m_fileIn.IsEof();
+	}
+
 	size_t DataLoad::Read(char * data, size_t size)
 	{
 		size_t rdd = 0;
 		if (m_fileIn.IsOpend()) {
 			rdd = m_fileIn.Read(data, size);
 			if (rdd > 0) {
-				m_dataChange.Decode(data, rdd);
+				m_dataChange.Decrypt(data, rdd);
 			}
 		}
 		return rdd;
@@ -290,7 +286,7 @@ namespace DP {
 		m_fileIn.Close();
 	}
 
-	void DateLoadLine::ReadLine(std::string & line)
+	void DataLoadLine::ReadLine(std::string & line)
 	{
 		size_t start = 0;//开始位置
 		constexpr size_t szRead = 4096;
@@ -314,7 +310,12 @@ namespace DP {
 		} while (1);
 	}
 
-	void DateLoadLine::GetLine(std::string & str, size_t start)
+	bool DataLoadLine::IsEof() const
+	{
+		return m_readCache.empty() && DataLoad::IsEof();
+	}
+
+	void DataLoadLine::GetLine(std::string & str, size_t start)
 	{
 		auto sz = m_readCache.size();
 		if (sz > start) {

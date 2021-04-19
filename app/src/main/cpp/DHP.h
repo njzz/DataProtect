@@ -22,15 +22,17 @@ namespace DP {
 		bool Open(LPCTSTR lpFileIn, const std::string &skey);
 		size_t Read(char *data, size_t size);
 		void Close();
+		bool IsEof() const;
 
 	protected:
 		DataChange m_dataChange;
 		FileOpt m_fileIn;
 	};
 
-	class DateLoadLine:public DataLoad {
+	class DataLoadLine:public DataLoad {
 	public:
 		void ReadLine(std::string &line);
+		bool IsEof() const;
 	protected:
 		void GetLine(std::string &str, size_t start);
 		size_t Read(char *data, size_t size);//复写父类，但不实现
@@ -50,9 +52,11 @@ namespace DP {
 
 	//集成接口
 	//处理文件
-	bool ProcessFile(LPCTSTR  lpFileIn, LPCTSTR  lpFileOut, const std::string &skey, bool bEncode);
-	//处理字符串(decode 后的为 hex)
-	bool ProcessStr(const std::string &strIn, std::string &strOut, const std::string &skey, bool bEncode);
+	bool ProcessFile(LPCTSTR  lpFileIn, LPCTSTR  lpFileOut, const std::string &skey, bool bEncrypt);
+	//处理字符串(加密模式：加密后strOut为hex，解谜模式：strIn为hex)
+	bool ProcessStr(const std::string &strIn, std::string &strOut, const std::string &skey, bool bEncrypt);
+	//处理数据 (data 为任意二进制数据)
+	bool ProcessData(const std::string &dataIn, std::string &dataOut, const std::string &skey, bool bEncrypt);
 	//字符串加密并保存到文件
 	bool StrEncode2File(const char * lpStrIn, size_t strLen, LPCTSTR  lpFileOut, const std::string &skey);
 	//文件解密并输出到字符串

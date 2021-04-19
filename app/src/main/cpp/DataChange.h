@@ -22,14 +22,16 @@ public:
 	bool SetHead(const std::string &key, const std::string &head);
 
 	//加密解密
-	void Encode(char *pData,UINT nlen);
-	void Decode(char *pData,UINT nlen);//
+	void Encrypt(char *pData,UINT nlen);
+	void Decrypt(char *pData,UINT nlen);//
 	DataChange(void) = default;
 	~DataChange(void);
 
 protected:
 	void Reset();//重置
 	void InitTable();//初始化表
+	inline char EnChar(char in);
+	inline char DeChar(char in);
 
 protected:
 	std::string m_pk;//原始等效key

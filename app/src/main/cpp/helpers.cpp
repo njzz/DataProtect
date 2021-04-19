@@ -111,7 +111,7 @@ std::string & GetBreakAway(std::string & strInfo, int len)
 			}
 		}
 
-		//先来一次全面的，直接等效扩展，如果密码长度大于16，会造成前面一样，而要得是就算改变一个，也大不一样
+		//先来一次全面的，直接等效扩展，如果密码长度大于32[sha256本身位宽]，会造成前面一样，而要得是就算改变一个，也大不一样
 		auto mTotal = StrSHA256(strInfo.c_str(), strInfo.length());
 
 		//叠加扩展
@@ -146,10 +146,10 @@ char dec2hex(unsigned char ch)
 	}
 	return 0; 
 }
-std::string BasicToHex( const char *pSrc,int len )
+std::string BasicToHex( const char *pSrc,size_t len )
 {
 	std::string result;
-	if(pSrc && len>0)
+	if(pSrc && len)
 	{
 		result.reserve(len*2);
 		int nIndex=0;
@@ -180,7 +180,7 @@ char hex2dec(unsigned char ch)
 	return 0; 
 }
 
-std::string HexToBasic( const char *pSrc,int len )
+std::string HexToBasic( const char *pSrc,size_t len )
 {
 	std::string result;
 	if(pSrc && len>0 && len%2==0 )

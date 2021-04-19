@@ -100,41 +100,57 @@ void DataChange::InitTable()
 		m_tableDe[m_tableEn[i]] = (unsigned char)i;
 	}
 	//c=tableEn[I] , I=tableDe[c]
+	m_chLianshiEn = m_chLianshiDe = srand.back();
+}
+
+inline char DataChange::EnChar(char in)
+{
+	auto rnd =  ((unsigned char)(m_pk[m_nKeyCurrentEn]^m_chLianshiEn)) % 4 + 1;//[1,4]
+	for (auto i = 0; i < rnd; ++i) {
+		in = m_tableEn[(unsigned char)(in)] ^ m_pk[(m_nKeyCurrentEn + i)%m_pk.size()];
+	}
+	in ^= m_chLianshiEn;
+	m_chLianshiEn =in^ m_tableDe[(unsigned char)in];
+
+	m_nKeyCurrentEn = (m_nKeyCurrentEn+rnd)%m_pk.size();
+	return in;
+}
+
+inline char DataChange::DeChar(char in)
+{
+	auto t = in;
+	in ^= m_chLianshiDe;	
+
+	auto rnd =  ((unsigned char)(m_pk[m_nKeyCurrentDe]^ m_chLianshiDe)) % 4 + 1;//[1,4]
+	for (auto i = 0; i < rnd; ++i) {
+		in = m_tableDe[(unsigned char)(in ^ m_pk[(m_nKeyCurrentDe + rnd - 1 - i) % m_pk.size()])];
+	}
+
+	m_chLianshiDe = t^ m_tableDe[(unsigned char)t];
+
+	m_nKeyCurrentDe = (m_nKeyCurrentDe+rnd)%m_pk.size();
+	return in;
 }
 
 
-void DataChange::Encode( char *pData ,UINT nLen)
+void DataChange::Encrypt( char *pData ,UINT nLen)
 {
 	if(pData==nullptr || nLen<1 ) return;
 	UINT nIndex=0;
-	char chEncoded,chInput;
 	while(nIndex<nLen)
 	{
-		chInput = m_tableEn[(unsigned char)(pData[nIndex])];//输入扭曲
-		chEncoded =(chInput^m_pk[m_nKeyCurrentEn]^ m_chLianshiEn);
-		m_chLianshiEn = (chInput ^ m_pk[m_nKeyCurrentEn]);//下一个链式字节
-		pData[nIndex]= chEncoded;//
-
-		if(++m_nKeyCurrentEn == m_pk.length()) m_nKeyCurrentEn =0;
-		
+		pData[nIndex]= EnChar(pData[nIndex]);//		
 		++nIndex;
 	}
 }
 
-void DataChange::Decode( char *pData ,UINT nLen)
+void DataChange::Decrypt( char *pData ,UINT nLen)
 {
 	if(pData==nullptr || nLen<1 ) return;
 	UINT nIndex=0;
-	char chDecoded;
 	while(nIndex<nLen)
 	{
-		chDecoded=(char)(pData[nIndex]^m_pk[m_nKeyCurrentDe]^ m_chLianshiDe);
-		pData[nIndex]= m_tableDe[(unsigned char)chDecoded];//
-
-		m_chLianshiDe = (char)(chDecoded^ m_pk[m_nKeyCurrentDe]);//下一个链式字
-
-		if(++m_nKeyCurrentDe ==m_pk.length()) m_nKeyCurrentDe =0;
-
+		pData[nIndex]= DeChar(pData[nIndex]);//
 		++nIndex;
 	}
 }

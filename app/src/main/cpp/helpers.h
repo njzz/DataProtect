@@ -10,8 +10,8 @@ namespace Helpers
 	std::string CreateRandomString(size_t length, int rd = 0);//创建随机字串
 
 	//一般用于显示转换
-	std::string BasicToHex(const char *pSrc,int len);
-	std::string HexToBasic(const char *pSrc,int len);
+	std::string BasicToHex(const char *pSrc,size_t len);
+	std::string HexToBasic(const char *pSrc,size_t len);
 };
 
 
